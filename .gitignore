@@ -11,3 +11,4 @@ __pycache__/
 
 # Ignorar ficheiros de vídeo gerados
 *.mp4
+*.png
