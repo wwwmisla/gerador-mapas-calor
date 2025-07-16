@@ -50,4 +50,19 @@ Thumbs.db
 *.bak
 
 # Por enquanto sem
-Readme.md
+Readme_.md
+
+# Ignorar ficheiros de modelo do YOLO
+*.pt
+
+# Ignorar a pasta de resultados de treino
+/runs/
+
+# Ignorar pastas de ambiente virtual Python
+.venv/
+venv/
+__pycache__/
+
+# Ignorar ficheiros de vídeo gerados
+*.mp4
+*.png
