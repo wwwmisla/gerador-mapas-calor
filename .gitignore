@@ -1,0 +1,53 @@
+# ==============================================================================
+# .gitignore 
+# ==============================================================================
+
+# 1. Ambientes Virtuais
+# Pode ser recriado a partir do arquivo requirements.txt.
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# 2. Cache e Bytecode do Python
+# Arquivos gerados automaticamente pelo Python para acelerar a execução.
+# Eles não são necessários no repositório e poluem o histórico de commits.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 3. Configurações de IDEs e Editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 4. Arquivos do Jupyter Notebook
+.ipynb_checkpoints/
+
+# 5. Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# 6. Dados e Pesos do Modelo
+
+# Ignora os vídeos de dados. É ideal obter seus próprios vídeos.
+/data/
+
+# Ignora os pesos do modelo baixados. A biblioteca 'ultralytics' os baixa
+# automaticamente na primeira execução, se não os encontrar.
+/app/weights/
+
+# 7. Arquivos de Saída (Resultados)
+/output/
+
+# 8. Outros
+# Arquivos de log e outros arquivos temporários que possam ser gerados.
+*.log
+*.tmp
+*.bak
+
+# Por enquanto sem
+Readme.md
