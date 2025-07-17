@@ -48,7 +48,7 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
-.gradio
+.gradio/
 
 # Ignorar ficheiros de modelo do YOLO
 *.pt
@@ -57,9 +57,5 @@ Thumbs.db
 /runs/
 
 # Ignorar ficheiros de vídeo gerados
-*.mp4
-*.png
-
-# Por enquanto sem
-Readme.md
-t.md
+# *.mp4
+# *.png
