@@ -2,79 +2,77 @@
 
 import cv2
 import numpy as np
-from ultralytics import YOLO
 from collections import defaultdict
-from typing import Generator, Tuple, Dict, List, Any
+import random
+from tqdm import tqdm
 
-# Constante para pular frames e acelerar o processamento
-FRAME_SKIP = 5 
+def draw_tracking_annotations(frame, boxes_xyxy, track_ids, track_colors):
+    """Desenha as anotações de rastreamento (caixas e IDs) de forma customizada."""
+    for box, track_id in zip(boxes_xyxy, track_ids):
+        x1, y1, x2, y2 = map(int, box)
+        if track_id not in track_colors:
+            track_colors[track_id] = (random.randint(30, 255), random.randint(30, 255), random.randint(30, 255))
+        color = track_colors[track_id]
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        label = f"ID:{track_id}"
+        (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+        cv2.rectangle(frame, (x1, y1 - h - 10), (x1 + w + 5, y1), color, -1)
+        cv2.putText(frame, label, (x1 + 5, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, lineType=cv2.LINE_AA)
+    return frame
 
-def track_people_in_video(
-    video_path: str, model: YOLO
-) -> Generator[Tuple[float, str, np.ndarray | None, Dict[int, List[Any]] | None], None, None]:
+def process_video_single_pass(video_path, model, output_video_path, conf_threshold, progress=None):
     """
-    Processa um vídeo para detectar e rastrear pessoas, fornecendo feedback de progresso.
-
-    Esta função é um gerador que lê um vídeo, utiliza o modelo YOLOv8 para
-    rastrear pessoas e envia (yields) o progresso do processamento.
-
-    Args:
-        video_path (str): O caminho para o arquivo de vídeo.
-        model (YOLO): A instância do modelo YOLO já carregada.
-
-    Yields:
-        tuple: Uma tupla contendo (progresso, status_texto, primeiro_frame, historico).
-               Ao final, os dois últimos valores são os resultados finais.
+    Processa o vídeo em uma única passagem, gerando o vídeo de rastreamento
+    e coletando os dados para o mapa de calor (trajetórias e alturas).
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"Erro: Não foi possível abrir o vídeo em {video_path}")
-        yield 1.0, "Erro ao abrir o vídeo", None, None
-        return
+        raise IOError(f"ERRO: Falha ao abrir o vídeo: {video_path}")
 
+    w, h, fps = (int(cap.get(p)) for p in (cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT, cv2.CAP_PROP_FPS))
+    out_video = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+
+    track_history = defaultdict(list)
+    detection_heights = []
+    track_colors = {}
+    first_frame = None
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    track_history = defaultdict(lambda: [])
-    frame_count = 0
     
-    success, first_frame = cap.read()
-    if not success:
-        print("Erro: Não foi possível ler o primeiro frame do vídeo.")
-        cap.release()
-        yield 1.0, "Erro ao ler o vídeo", None, None
-        return
-        
-    yield 0.0, f"Iniciando rastreamento em {total_frames} frames...", None, None
+    tracking_classes = [0] # Classe 'person' no COCO dataset
 
-    while cap.isOpened():
+    # Utiliza a barra de progresso do Gradio se disponível
+    iterator = range(total_frames)
+    if progress:
+        iterator = progress.tqdm(range(total_frames), desc="Rastreando objetos no vídeo")
+
+    for frame_index in iterator:
         success, frame = cap.read()
         if not success:
             break
+        if first_frame is None:
+            first_frame = frame.copy()
 
-        frame_count += 1
-        
-        # Pula frames para acelerar o processamento
-        if frame_count % FRAME_SKIP != 0:
-            continue
-
-        # Executa o rastreamento com YOLOv8
-        results = model.track(frame, persist=True, classes=[0], verbose=False)
+        results = model.track(frame, persist=True, classes=tracking_classes, conf=conf_threshold, verbose=False)
+        annotated_frame = frame.copy()
 
         if results[0].boxes.id is not None:
-            boxes = results[0].boxes.xywh.cpu()
+            boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
+            boxes_xywh = results[0].boxes.xywh.cpu()
             track_ids = results[0].boxes.id.int().cpu().tolist()
 
-            for box, track_id in zip(boxes, track_ids):
-                x, y, w, h = box
-                center_point = (int(x), int(y + h / 2))
+            annotated_frame = draw_tracking_annotations(annotated_frame, boxes_xyxy, track_ids, track_colors)
+
+            for box, track_id in zip(boxes_xywh, track_ids):
+                center_point = (int(box[0]), int(box[1] + box[3] / 2)) # Ponto central na base
                 track_history[track_id].append(center_point)
-        
-        # Envia o progresso atual de volta para a interface
-        progress = frame_count / total_frames
-        yield progress, f"Processando... {frame_count}/{total_frames}", None, None
+                detection_heights.append(box[3].item())
+
+        out_video.write(annotated_frame)
 
     cap.release()
-    cv2.destroyAllWindows()
+    out_video.release()
+
+    avg_height = np.mean(detection_heights) if detection_heights else 30.0
     
-    status = f"Rastreamento concluído. {len(track_history)} trajetórias encontradas."
-    print(status)
-    yield 1.0, status, first_frame, track_history
+    print("✅ Processamento de rastreamento concluído.")
+    return track_history, first_frame, avg_height

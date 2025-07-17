@@ -1,81 +1,123 @@
+# app/app.py
+
 import gradio as gr
-from pathlib import Path
+import os
+import time
 from ultralytics import YOLO
-from modules.tracker import track_people_in_video
-from modules.heatmap_generator import create_heatmap_from_points
+import cv2
+import asyncio # Importe a biblioteca asyncio
 
-# --- CONFIGURAÇÃO E CARREGAMENTO DO MODELO (sem alterações) ---
-BASE_DIR = Path(__file__).resolve().parent
-WEIGHTS_PATH = BASE_DIR / "weights" / "yolov8n.pt"
-EXAMPLES_DIR = BASE_DIR / "examples"
-EXAMPLES_DIR.mkdir(exist_ok=True)
-print("Carregando modelo YOLOv8...")
-model = YOLO(WEIGHTS_PATH)
-print("Modelo carregado com sucesso.")
+# Importa as funções dos módulos
+from modules.tracker import process_video_single_pass
+from modules.heatmap_generator import generate_adaptive_flow_heatmap
 
-# --- FUNÇÃO PRINCIPAL DA INTERFACE (ATUALIZADA) ---
-def generate_heatmap_interface(video_file, blur_amount, threshold_amount, progress=gr.Progress(track_tqdm=True)):
-    if video_file is None:
-        raise gr.Error("Por favor, faça o upload de um arquivo de vídeo.")
+# --- CONFIGURAÇÕES E CAMINHOS (VERSÃO ROBUSTA) ---
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(APP_DIR, 'weights', 'yolov8s.pt')
+OUTPUT_DIR = os.path.join(APP_DIR, 'temp_outputs')
+EXAMPLES_DIR = os.path.join(APP_DIR, 'examples')
+WEIGHTS_DIR = os.path.join(APP_DIR, 'weights')
 
-    video_path = video_file
-    print("-----------------------------------")
-    print(f"Processando vídeo: {video_path}")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(EXAMPLES_DIR, exist_ok=True)
+os.makedirs(WEIGHTS_DIR, exist_ok=True)
 
-    tracker_generator = track_people_in_video(video_path, model)
-    first_frame, track_history = None, None
+# --- CARREGAMENTO DO MODELO ---
+try:
+    model = YOLO(MODEL_PATH)
+    print("✅ Modelo YOLO carregado com sucesso.")
+except Exception as e:
+    print(f"❌ ERRO ao carregar o modelo: {e}")
+    print(f"Certifique-se de que o arquivo 'yolov8s.pt' está na pasta '{WEIGHTS_DIR}'.")
+    model = None
+
+# --- FUNÇÃO PRINCIPAL DE PROCESSAMENTO ---
+def generate_heatmap_and_video(video_path, conf_threshold, line_factor, blur_factor, heatmap_alpha, progress=gr.Progress()):
+    if not model:
+        raise gr.Error("O modelo YOLO não foi carregado. Verifique o console para erros.")
+    if not video_path:
+        raise gr.Error("Por favor, forneça um vídeo de entrada.")
+
+    timestamp = int(time.time())
+    base_filename = os.path.splitext(os.path.basename(video_path))[0]
+    output_video_path = os.path.join(OUTPUT_DIR, f"{base_filename}_{timestamp}_tracked.mp4")
+    output_heatmap_path = os.path.join(OUTPUT_DIR, f"{base_filename}_{timestamp}_heatmap.png")
+
+    progress(0, desc="Iniciando Rastreamento...")
+    track_history, first_frame, avg_height = process_video_single_pass(
+        video_path, model, output_video_path, conf_threshold, progress
+    )
+
+    progress(0.85, desc="Gerando Mapa de Calor...")
+    if first_frame is None:
+        raise gr.Error("Não foi possível extrair frames do vídeo. O arquivo pode estar corrompido ou em um formato inválido.")
+
+    final_heatmap_image = generate_adaptive_flow_heatmap(
+        first_frame, track_history, avg_height, line_factor, blur_factor, heatmap_alpha, cv2.COLORMAP_JET
+    )
     
-    for progress_value, status, frame_result, history_result in tracker_generator:
-        progress(progress_value, desc=status)
-        if frame_result is not None: first_frame = frame_result
-        if history_result is not None: track_history = history_result
-
-    if first_frame is None or not track_history:
-        raise gr.Error("Não foi possível rastrear pessoas neste vídeo.")
-        
-    print("Gerando o mapa de calor com estilo profissional...")
-    # ATUALIZAÇÃO AQUI: Passamos o threshold_amount para a função
-    heatmap_image = create_heatmap_from_points(first_frame, track_history, blur_amount, threshold_amount)
-    print("Processo concluído com sucesso!")
-    print("-----------------------------------")
+    cv2.imwrite(output_heatmap_path, final_heatmap_image)
     
-    return heatmap_image
+    progress(1, desc="Concluído!")
+    
+    return output_heatmap_path, output_video_path
 
-# --- BLOCO DE CONSTRUÇÃO DA INTERFACE GRADIO (ATUALIZADO) ---
-with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="orange")) as iface:
+# --- CONSTRUÇÃO DA INTERFACE GRADIO ---
+with gr.Blocks(theme=gr.themes.Soft(), title="Gerador de Mapa de Calor") as app:
     gr.Markdown(
         """
-        # 🔥 Gerador de Mapas de Calor de Alta Qualidade
-        **Faça o upload de um vídeo** para visualizar as áreas de maior movimentação e concentração de pessoas.
-        O sistema gera um mapa de calor com estilo profissional, destacando apenas as zonas de atividade relevante.
+        # 🔥 Gerador de Mapa de Calor de Fluxo com YOLOv8
+        Faça o upload de um vídeo para rastrear pessoas e gerar um mapa de calor que visualiza as áreas de maior movimento.
+        Ajuste os parâmetros para otimizar a visualização para sua cena específica.
         """
     )
+
     with gr.Row():
         with gr.Column(scale=1):
-            video_input = gr.Video(label="Vídeo de Entrada")
-            gr.Markdown("### ⚙️ Parâmetros do Estilo")
-            blur_slider = gr.Slider(minimum=1, maximum=151, value=51, step=2, label="Amplitude do Calor (Blur)", 
-                                    info="Controla a 'largura' das manchas de calor.")
-            # NOVO SLIDER PARA O THRESHOLD
-            threshold_slider = gr.Slider(minimum=0.0, maximum=0.5, value=0.1, step=0.01, label="Sensibilidade (Threshold)",
-                                       info="Controla o nível mínimo de atividade para aparecer no mapa. Valores maiores = menos áreas visíveis.")
-            submit_button = gr.Button("Gerar Mapa de Calor", variant="primary")
+            gr.Markdown("### 1. Entrada e Parâmetros")
+            video_input = gr.Video(label="Vídeo de Entrada", sources=["upload"])
+            
+            with gr.Accordion("Parâmetros Avançados", open=False):
+                conf_threshold = gr.Slider(minimum=0.1, maximum=0.9, value=0.3, step=0.05, label="Confiança de Detecção")
+                line_factor = gr.Slider(minimum=0.01, maximum=0.2, value=0.05, step=0.01, label="Fator de Espessura da Linha")
+                blur_factor = gr.Slider(minimum=0.1, maximum=3.0, value=1.0, step=0.1, label="Fator de Dispersão (Blur)")
+                heatmap_alpha = gr.Slider(minimum=0.1, maximum=1.0, value=0.5, step=0.05, label="Opacidade do Mapa de Calor")
+            
+            run_button = gr.Button("Gerar Análise", variant="primary")
+
+            gr.Markdown("---")
+            gr.Markdown("### Exemplos")
+            
+            example_files = [os.path.join(EXAMPLES_DIR, f) for f in os.listdir(EXAMPLES_DIR) if f.lower().endswith(('.mp4', '.avi', '.mov'))]
+            
+            gr.Examples(
+                examples=example_files[:4],
+                inputs=[video_input],
+                label="Clique em um exemplo para carregar"
+            )
 
         with gr.Column(scale=2):
-            image_output = gr.Image(label="Resultado Final", interactive=False, height=500)
+            gr.Markdown("### 2. Resultados da Análise")
+            heatmap_output = gr.Image(label="Mapa de Calor de Fluxo", type="filepath")
+            video_output = gr.Video(label="Vídeo com Rastreamento")
 
-    gr.Examples(
-        examples=[str(p) for p in EXAMPLES_DIR.glob("*.mp4")],
-        inputs=[video_input],
-        label="Exemplos (clique para carregar)"
+    run_button.click(
+        fn=generate_heatmap_and_video,
+        inputs=[video_input, conf_threshold, line_factor, blur_factor, heatmap_alpha],
+        outputs=[heatmap_output, video_output]
     )
     
-    submit_button.click(
-        fn=generate_heatmap_interface,
-        # ATUALIZAÇÃO AQUI: Adicionamos o novo slider aos inputs
-        inputs=[video_input, blur_slider, threshold_slider],
-        outputs=[image_output]
+    gr.Markdown(
+        """
+        ---
+        **Nota sobre o Processamento:** O processamento de vídeo pode ser demorado, dependendo da duração e resolução do vídeo, e da capacidade do seu hardware.
+        """
     )
 
+# --- PONTO PRINCIPAL DE EXECUÇÃO COM A CORREÇÃO ---
 if __name__ == "__main__":
-    iface.launch(share=True)
+    # Esta é a correção: Altera a política de evento assíncrono para uma mais estável no Windows.
+    if os.name == 'nt': # 'nt' é o nome do SO para Windows
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+    app.launch(debug=True)

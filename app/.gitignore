@@ -1,0 +1,5 @@
+# Ignorar arquivos temporários gerados pela aplicação
+/temp_outputs/
+
+# Ignorar arquivos do ambiente virtual do Python
+/venv/
