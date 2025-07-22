@@ -9,6 +9,7 @@ venv/
 env/
 .env/
 ENV/
+/app/venv/
 
 # 2. Cache e Bytecode do Python
 # Arquivos gerados automaticamente pelo Python para acelerar a execução.
@@ -31,7 +32,15 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# 6. Dados e Pesos do Modelo
+# 6. Cache do Gradio
+.gradio/
+
+# ==============================================================================
+# REGRAS ESPECÍFICAS DO PROJETO
+# ==============================================================================
+
+# 7. Dados e Pesos do Modelo
+# Devem ser obtidos separadamente para manter o repositório leve.
 
 # Ignora os vídeos de dados. É ideal obter seus próprios vídeos.
 /data/
@@ -39,23 +48,22 @@ Thumbs.db
 # Ignora os pesos do modelo baixados. A biblioteca 'ultralytics' os baixa
 # automaticamente na primeira execução, se não os encontrar.
 /app/weights/
+*.pt
 
-# 7. Arquivos de Saída (Resultados)
+# 8. Arquivos de Saída (Resultados)
+# O repositório deve conter apenas o código-fonte, não os artefatos gerados.
+
+# Ignora os resultados da experimentação local dos notebooks.
 /output/
 
-# 8. Outros
+# Ignora os resultados de treinamentos do YOLO.
+/runs/
+
+# Ignora os vídeos temporários gerados pela aplicação Gradio.
+/app/temp_outputs/
+
+# 9. Outros
 # Arquivos de log e outros arquivos temporários que possam ser gerados.
 *.log
 *.tmp
 *.bak
-.gradio/
-
-# Ignorar ficheiros de modelo do YOLO
-*.pt
-
-# Ignorar a pasta de resultados de treino
-/runs/
-
-# Ignorar ficheiros de vídeo gerados
-# *.mp4
-# *.png

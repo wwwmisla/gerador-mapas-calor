@@ -1,2 +1,24 @@
-*.pt filter=lfs diff=lfs merge=lfs -text
-*.mp4 filter=lfs diff=lfs merge=lfs -text
+# ==============================================================================
+# .gitattributes para o projeto 
+# Configura o Git LFS para gerenciar arquivos grandes.
+# ==============================================================================
+
+# Vídeos de exemplo para a aplicação Gradio
+app/examples/.mp4 filter=lfs diff=lfs merge=lfs -text
+app/examples/.avi filter=lfs diff=lfs merge=lfs -text
+app/examples/*.webm filter=lfs diff=lfs merge=lfs -text
+
+# Vídeos de demonstração na documentação
+docs/tracked_videos/.mp4 filter=lfs diff=lfs merge=lfs -text
+docs/tracked_videos/.avi filter=lfs diff=lfs merge=lfs -text
+docs/tracked_videos/*.webm filter=lfs diff=lfs merge=lfs -text
+
+# Imagens de resultado na documentação
+docs/heatmaps/.jpg filter=lfs diff=lfs merge=lfs -text
+docs/heatmaps/.jpeg filter=lfs diff=lfs merge=lfs -text
+docs/heatmaps/.png filter=lfs diff=lfs merge=lfs -text
+docs/heatmaps/.gif filter=lfs diff=lfs merge=lfs -text
+
+# (Opcional) Se você decidir versionar algum peso de modelo específico,
+# descomente a linha abaixo e remova a regra '*.pt' do .gitignore.
+app/weights/*.pt filter=lfs diff=lfs merge=lfs -text
