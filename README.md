@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/) [![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-red)](https://docs.ultralytics.com/pt/) [![Gradio](https://img.shields.io/badge/Gradio-Interface-orange)](https://gradio.app/) [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Spaces-yellow)](https://huggingface.co/spaces) [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/wwwmisla/gerador-mapas-calor/blob/main/LICENSE) ![Status](https://img.shields.io/badge/status-Aplicação%20Funcional-brightgreen)
 
-[🚀 **Aplicação Interativa**](https://huggingface.co/spaces/wwwmisla/gerador-mapas-calor) **|** [📓 **Notebooks do Projeto**](https://github.com/wwwmisla/gerador-mapas-calor/blob/main/notebooks/) **|** [🎬 **Vídeo de Apresentação**](#) **|** [📂 **Código Fonte**](https://github.com/wwwmisla/gerador-mapas-calor/)
+[🚀 **Aplicação Interativa**](https://huggingface.co/spaces/wwwmisla/gerador-mapas-calor) **|** [📓 **Notebooks do Projeto**](https://github.com/wwwmisla/gerador-mapas-calor/blob/main/notebooks/) **|** [🎬 **Vídeo de Apresentação**](https://drive.google.com/file/d/1_9J7ShKuoeoIAk0fjyT9wJE7pqM-sCdw/view?usp=drive_link) **|** [📂 **Código Fonte**](https://github.com/wwwmisla/gerador-mapas-calor/)
 
 </div>
 
@@ -15,6 +15,7 @@
 <div align="center">
 
 <img src="docs/heatmaps/pessoas_adaptive_flow_heatmap.png" alt="Visualização de Fluxo Gerada pelo Projeto" width="800"/>
+<br>
 <small>Exemplo de um mapa de calor de fluxo gerado pela aplicação, sobreposto a um frame do vídeo original.</small>
 
 </div>
@@ -25,7 +26,7 @@
 
 - [1. Introdução: O Problema e a Proposta](#1-introdução)
 - [2. Metodologia e Desenvolvimento](#2-metodologia-e-desenvolvimento)
-  - [2.1. Gestão e Etapas do Projeto](#21-gestão-e-etapas-do-projeto)
+  - [2.1. Gestão de Tarefas e Etapas](#21-gestão-de-tarefas-e-etapas)
   - [2.2. A Etapa da Experimentação](#22-a-etapa-da-experimentação)
   - [2.3 Gerador de Mapas de Calor](#23-gerador-de-mapas-de-calor)
   - [2.4. A Técnica Final: Heatmap Adaptativo por Densidade de Fluxo](#24-a-técnica-final-heatmap-adaptativo-por-densidade-de-fluxo)
@@ -234,7 +235,7 @@ Uma versão funcional e interativa da aplicação está implantada e pode ser ac
 
 Conforme solicitado nos critérios de avaliação, uma apresentação em vídeo do projeto foi produzida. O vídeo detalha o problema, as tecnologias utilizadas, os resultados obtidos e inclui uma demonstração prática da aplicação.
 
-**[🎬 Assistir à Apresentação no YouTube](#)**
+**[🎬 Assistir à Apresentação no YouTube](https://drive.google.com/file/d/1_9J7ShKuoeoIAk0fjyT9wJE7pqM-sCdw/view?usp=drive_link)**
 
 ---
 
